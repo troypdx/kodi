@@ -67,7 +67,7 @@ class FlightInfo:
 class FlightTableDialog(xbmcgui.WindowDialog):
 
     #dialog = FlightTableDialog(alldetails,schcol,aircol,typcol,adecol,stscol,fltcol,gtecol,bagcol,airline,adtype,status,nextfocus,recstep,strrow,endrow,maxrow,setairline,setfilter,setdate,setdelay)
-    def __init__(self,ad,schcol,aircol,typcol,adecol,stscol,fltcol,gtecol,bagcol,al,at,st,nf,rs,sr,er,mr,sa,sf,sd,sl):
+    def __init__(self,ad,schcol,aircol,typcol,adecol,stscol,fltcol,gtecol,bagcol,al,at,st,nf,rs,sr,er,mr,sa,sf,sd,sl,setflight,setadcity):
         self.retval = 0
         self.w = 1280
         self.h = 720
@@ -77,10 +77,10 @@ class FlightTableDialog(xbmcgui.WindowDialog):
         self.addControl(self.background)
         self.titlelabel1 = xbmcgui.ControlLabel(70,25,self.w-140,30,addon.getLocalizedString(id=30000),textColor='0xff00cc77',alignment=6)
         self.addControl(self.titlelabel1)
-        self.titlelabel2 = xbmcgui.ControlLabel(50,50,self.w-140,30,addon.getLocalizedString(id=30062)+': '+sd+', '+addon.getLocalizedString(id=30011)+': '+sa+', '+addon.getLocalizedString(id=30041)+': '+sf,textColor='0xffffffff',alignment=6)
+        self.titlelabel2 = xbmcgui.ControlLabel(50,50,self.w-140,30,addon.getLocalizedString(id=30008)+': '+sd+', '+addon.getLocalizedString(id=30011)+': '+sa+', '+addon.getLocalizedString(id=30041)+': '+sf+', '+addon.getLocalizedString(id=30062)+' '+setflightno+', '+addon.getLocalizedString(id=30009)+': '+setadcity,textColor='0xffffffff',alignment=6)
         self.addControl(self.titlelabel2)
         if sl == 'true':
-           self.titlelabel3 = xbmcgui.ControlLabel(70,75,self.w-140,30,addon.getLocalizedString(id=30061),textColor='0xffff5555',alignment=6)
+           self.titlelabel3 = xbmcgui.ControlLabel(70,75,self.w-140,30,addon.getLocalizedString(id=30007),textColor='0xffff5555',alignment=6)
            self.addControl(self.titlelabel3)
         #self.debuglabel1 = xbmcgui.ControlLabel(50,100,self.w-140,30,'[ len(ad)='+str(len(ad))+', recstep='+str(rs)+', strrow='+str(sr)+', endrow='+str(er)+', maxrow='+str(mr)+' ]',textColor='0xffff0000',alignment=6)
         #self.addControl(self.debuglabel1)
@@ -136,16 +136,22 @@ class FlightTableDialog(xbmcgui.WindowDialog):
             self.baglst.addItems(bagcol[sr:er])
 
         # Navigation buttons
-        self.buttonok=xbmcgui.ControlButton(self.w/2-100,self.h-80,200,30,addon.getLocalizedString(id=30003),alignment=6)
-        self.addControl(self.buttonok)
-        self.buttonprev=xbmcgui.ControlButton(self.w/2-350,self.h-80,200,30,addon.getLocalizedString(id=30004),alignment=6)
+        self.buttonprev=xbmcgui.ControlButton(self.w/2-500,self.h-80,200,30,addon.getLocalizedString(id=30004),alignment=6)
         self.addControl(self.buttonprev)
-        self.buttonnext=xbmcgui.ControlButton(self.w/2+150,self.h-80,200,30,addon.getLocalizedString(id=30005),alignment=6)
+        self.buttonnext=xbmcgui.ControlButton(self.w/2-250,self.h-80,200,30,addon.getLocalizedString(id=30005),alignment=6)
         self.addControl(self.buttonnext)
-        self.buttonprev.controlRight(self.buttonok)
-        self.buttonok.controlLeft(self.buttonprev)
-        self.buttonok.controlRight(self.buttonnext)
-        self.buttonnext.controlLeft(self.buttonok)
+        self.buttonset=xbmcgui.ControlButton(self.w/2+0,self.h-80,200,30,addon.getLocalizedString(id=30010),alignment=6)
+        self.addControl(self.buttonset)
+        self.buttonok=xbmcgui.ControlButton(self.w/2+250,self.h-80,200,30,addon.getLocalizedString(id=30003),alignment=6)
+        self.addControl(self.buttonok)
+
+        self.buttonprev.controlRight(self.buttonnext)
+        self.buttonnext.controlLeft(self.buttonprev)
+        self.buttonnext.controlRight(self.buttonset)
+        self.buttonset.controlLeft(self.buttonnext)
+        self.buttonset.controlRight(self.buttonok)
+        self.buttonok.controlLeft(self.buttonset)
+
         if nf == -1:
             self.setFocus(self.buttonprev)
         elif nf == 1:
@@ -185,6 +191,9 @@ class FlightTableDialog(xbmcgui.WindowDialog):
             self.close()
         elif controlID == self.buttonnext:
             self.retval=1
+            self.close()
+        elif controlID == self.buttonset:
+            self.retval=2
             self.close()
 
 def setAircode(setairline):
@@ -226,107 +235,118 @@ def setDatecode(setdate):
     xbmc.log(msg='Fly PDX: setDatecode()')
     return datecode
 
-xbmc.log(msg='Fly PDX: Starting...')
-addon = xbmcaddon.Addon(id='plugin.program.flypdx')
+finished  = 0
+while finished == 0:
+    xbmc.log(msg='Fly PDX: Starting...')
+    addon = xbmcaddon.Addon(id='plugin.program.flypdx')
 
-setairline = xbmcaddon.Addon().getSetting('service1')
-setfilter  = xbmcaddon.Addon().getSetting('service2')
-setdate    = xbmcaddon.Addon().getSetting('service3')
-setdelay   = xbmcaddon.Addon().getSetting('service4')
+    setairline = xbmcaddon.Addon().getSetting('service1')
+    setfilter  = xbmcaddon.Addon().getSetting('service2')
+    setdate    = xbmcaddon.Addon().getSetting('service3')
+    setdelay   = xbmcaddon.Addon().getSetting('service4')
+    setflightno= xbmcaddon.Addon().getSetting('flightno')
+    setadcity  = xbmcaddon.Addon().getSetting('adcity')
 
-aircode    = setAircode(setairline)
-filtercode = setFiltercode(setfilter)
-datecode   = setDatecode(setdate)
+    aircode    = setAircode(setairline)
+    filtercode = setFiltercode(setfilter)
+    datecode   = setDatecode(setdate)
+    if setflightno == '':
+        flightcode = ''
+    else:
+        flightcode = '&FlightNum='+setflightno
 
-if setdelay=='true':
-   url = 'http://www.flypdx.com/PDX/Flights?'+aircode+datecode+filtercode+'&flightstatus=DL'
-else:
-   url = 'http://www.flypdx.com/PDX/Flights?'+aircode+datecode+filtercode
+    setadcity = re.sub(r" ", "+", setadcity)
+    if setadcity == '':
+        adcitycode = ''
+    else:
+        adcitycode = '&CityFromTo='+setadcity
 
-try:
-    req      = urllib2.Request(url)
-except TypeError as t:
-    xbmc.log(msg='Fly PDX: urllib2.Request(url) failed')
-req.add_header('User-Agent', 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-GB; rv:1.9.0.3) Gecko/2008092417 Firefox/3.0.3')
-response = urllib2.urlopen(req)
-content     = response.read()
-response.close()
-content = re.sub('&#39;','\'',content)
-alldetails = re.compile('<td>(.+?)</td>').findall(content)
-airline    = re.compile('<td>\s+?<a href=".+?Airlines/(.+?)"').findall(content)
-adtype     = re.compile('<td>\s+?<strong>(.+?)</strong>').findall(content)
-# status     = re.compile('<td>\s+?<span>(.+?)</span>').findall(content)
+    if setdelay=='true':
+        url = 'http://www.flypdx.com/PDX/Flights?'+aircode+datecode+filtercode+flightcode+adcitycode+'&flightstatus=DL'
+    else:
+        url = 'http://www.flypdx.com/PDX/Flights?'+aircode+datecode+filtercode+flightcode+adcitycode
 
-search = r'<span class="text-danger">\s+?<strong>'
-content = re.sub(search,'<span>',content)
-search = r'</strong>'
-content = re.sub(search,'</span>',content)
-search = r'<td>\s+?<span>(.+?)</span>'
-status = re.compile('<td>\s+?<span>(.+?)</span>').findall(content)
+    try:
+        req      = urllib2.Request(url)
+    except TypeError as t:
+        xbmc.log(msg='Fly PDX: urllib2.Request(url) failed')
 
-'''
+    req.add_header('User-Agent', 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-GB; rv:1.9.0.3) Gecko/2008092417 Firefox/3.0.3')
+    response = urllib2.urlopen(req)
+    content     = response.read()
+    response.close()
+    content = re.sub('&#39;','\'',content)
+    alldetails = re.compile('<td>(.+?)</td>').findall(content)
+    airline    = re.compile('<td>\s+?<a href=".+?Airlines/(.+?)"').findall(content)
+    adtype     = re.compile('<td>\s+?<strong>(.+?)</strong>').findall(content)
+
     search = r'<span class="text-danger">\s+?<strong>'
     content = re.sub(search,'<span>',content)
     search = r'</strong>'
     content = re.sub(search,'</span>',content)
     search = r'<td>\s+?<span>(.+?)</span>'
-    status.extend(re.compile(search).findall(content))
-'''
+    status = re.compile('<td>\s+?<span>(.+?)</span>').findall(content)
 
-recstep = 5
+    recstep = 5
 
-adlength = int(len(alldetails)/recstep)
-allength = int(len(airline))
-atlength = int(len(adtype))
-stlength = int(len(status))
+    adlength = int(len(alldetails)/recstep)
+    allength = int(len(airline))
+    atlength = int(len(adtype))
+    stlength = int(len(status))
 
-info = FlightInfo(alldetails,recstep)
-info.fixGate(alldetails,recstep)
-info.assignCol(alldetails,airline,adtype,status,recstep)
-schcol = info.schcol
-aircol = info.aircol
-typcol = info.typcol
-adecol = info.adecol
-stscol = info.stscol
-fltcol = info.fltcol
-gtecol = info.gtecol
-bagcol = info.bagcol
+    info = FlightInfo(alldetails,recstep)
+    info.fixGate(alldetails,recstep)
+    info.assignCol(alldetails,airline,adtype,status,recstep)
+    schcol = info.schcol
+    aircol = info.aircol
+    typcol = info.typcol
+    adecol = info.adecol
+    stscol = info.stscol
+    fltcol = info.fltcol
+    gtecol = info.gtecol
+    bagcol = info.bagcol
 
-finished  = 0
-nextfocus = 0
-strrow    = 0
-maxrow    = 14
-if math.ceil(len(alldetails)/recstep) < maxrow:
-    endrow = int(len(alldetails)/recstep)
-else:
-    endrow = maxrow
-while finished == 0:
-    #def __init__(self,ad,schcol,aircol,typcol,adecol,stscol,fltcol,gtecol,bagcol,al,at,st,nf,rs,sr,er,mr,sa,sf,sd,sl):
-    dialog = FlightTableDialog(alldetails,schcol,aircol,typcol,adecol,stscol,fltcol,gtecol,bagcol,airline,adtype,status,nextfocus,recstep,strrow,endrow,maxrow,setairline,setfilter,setdate,setdelay)
-    dialog.doModal()
-    if dialog.retval == 0:
-        finished = 1
-    elif dialog.retval == 1:
-        nextfocus = 1
-        strrow += maxrow
-        endrow += maxrow
-        if endrow > math.ceil(len(alldetails)/recstep):
-            strrow = 0
-            if math.ceil(len(alldetails)/recstep) < maxrow:
-                endrow = int(len(alldetails)/recstep)
-            else:
-                endrow = maxrow
-    elif dialog.retval == -1:
-        nextfocus = -1
-        strrow -= maxrow
-        endrow -= maxrow
-        if strrow < 0:
-            if math.ceil(len(alldetails)/recstep) < maxrow:
+    newsettings = 0
+    nextfocus = 0
+    strrow    = 0
+    maxrow    = 14
+    if math.ceil(len(alldetails)/recstep) < maxrow:
+        endrow = int(len(alldetails)/recstep)
+    else:
+        endrow = maxrow
+
+    while newsettings == 0:
+        #def __init__(self,ad,schcol,aircol,typcol,adecol,stscol,fltcol,gtecol,bagcol,al,at,st,nf,rs,sr,er,mr,sa,sf,sd,sl,st,sc):
+        dialog = FlightTableDialog(alldetails,schcol,aircol,typcol,adecol,stscol,fltcol,gtecol,bagcol,airline,adtype,status,nextfocus,recstep,strrow,endrow,maxrow,setairline,setfilter,setdate,setdelay,setflightno,setadcity)
+        dialog.doModal()
+        if dialog.retval == 0:
+            finished = 1
+            newsettings = 1
+        elif dialog.retval == 1:
+            nextfocus = 1
+            strrow += maxrow
+            endrow += maxrow
+            if endrow > math.ceil(len(alldetails)/recstep):
                 strrow = 0
-                endrow = int(len(alldetails)/recstep)
-            else:
-                strrow = int(len(alldetails)/recstep)-maxrow
-                endrow = int(len(alldetails)/recstep)
+                if math.ceil(len(alldetails)/recstep) < maxrow:
+                    endrow = int(len(alldetails)/recstep)
+                else:
+                    endrow = maxrow
+        elif dialog.retval == -1:
+            nextfocus = -1
+            strrow -= maxrow
+            endrow -= maxrow
+            if strrow < 0:
+                if math.ceil(len(alldetails)/recstep) < maxrow:
+                    strrow = 0
+                    endrow = int(len(alldetails)/recstep)
+                else:
+                    strrow = int(len(alldetails)/recstep)-maxrow
+                    endrow = int(len(alldetails)/recstep)
+        elif dialog.retval == 2:
+            newsettings = 1
+            xbmcaddon.Addon(id='plugin.program.flypdx').openSettings()
+            nextfocus = 1
+        del dialog
 
-    del dialog
 del addon
