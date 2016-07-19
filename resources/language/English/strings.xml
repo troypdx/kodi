@@ -7,6 +7,10 @@
     <string id="30004">Prev</string>
     <string id="30005">Next</string>
     <string id="30006">No Arrivals or Departures for this flight at this time. Please check back later.</string>
+    <string id="30007">View Delayed or Canceled Flights</string>
+    <string id="30008">Showing flights for</string>
+    <string id="30009">City</string>
+    <string id="30010">Settings</string>
 
     <string id="30011">Airline</string>
     <string id="30012">Type</string>
@@ -43,6 +47,8 @@
     <string id="30053">Tomorrow</string>
     <string id="30054">Yesterday</string>
 
-    <string id="30061">View Delayed or Canceled Flights</string>
-    <string id="30062">Showing flights for</string>
+    <string id="30061">Optional Fields</string>
+    <string id="30062">Flight#:</string>
+    <string id="30063">City Arriving From/Departing To:</string>
+
 </strings>
