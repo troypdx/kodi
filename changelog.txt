@@ -1,3 +1,4 @@
 0.X.Y initial development versions - Many thanks to roberto@ilpiola.it for sample code I used from rpcalendar
 0.0.1 first release
 0.0.2 added search for flight# and city to add-on settings, added direct access to addon settings from interface
+0.0.3 fixed appending of flight data 

@@ -16,7 +16,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import io, math, os, re, requests, sys, urllib2, urllib
+import datetime, io, math, os, re, requests, sys, urllib2, urllib
 from lxml import html
 import xbmc, xbmcaddon, xbmcvfs, xbmcgui, xbmcplugin
 
@@ -35,53 +35,58 @@ class FlightInfo:
         self.fltcol = []
         self.gtecol = []
         self.bagcol = []
+        xbmc.log(msg='Fly PDX: FlightInfo __init__')
 
     def fixGate(self,ad,rs):
         # Updates flight list in cases when gate information is missing
-        self.pattern = r"(\D+\d)"
-        self.step = rs
-        for self.inc in range(3,len(ad),self.step):
-            self.match = re.match(self.pattern,ad[self.inc])
-            if self.match:
-                self.step = rs-1
+        self.pattern = r"(\D+\d+)"
+        self.endalldet = 0
+        self.inc = 6
+        while self.endalldet == 0:
+            if self.inc > len(ad):
+                self.endalldet = 1
+                break
             else:
-                ad.insert(self.inc,'TBD')
-                self.step = rs
+                self.match = re.match(self.pattern,ad[self.inc])
+                if not self.match:
+                    ad.insert(self.inc,' ')
+                self.inc += 8
         xbmc.log(msg='Fly PDX: fixGate()')
 
-    def assignCol(self,ad,al,at,st,rs):
+    def assignCol(self,ad,rs):
         # Assign individual lists for flight table column data
         self.i = iter(ad)
         for self.inc in range(0,len(ad),rs):
             self.schcol.append(self.i.next())
+            self.aircol.append(self.i.next())
+            self.typcol.append(self.i.next())
             self.adecol.append(self.i.next())
+            self.stscol.append(self.i.next())
             self.fltcol.append(self.i.next())
             self.gtecol.append(self.i.next())
             self.bagcol.append(self.i.next())
-        self.aircol.extend(al)
-        self.typcol.extend(at)
-        self.stscol.extend(st)
-
         xbmc.log(msg='Fly PDX: assignCol()')
 
 class FlightTableDialog(xbmcgui.WindowDialog):
-
-    #dialog = FlightTableDialog(alldetails,schcol,aircol,typcol,adecol,stscol,fltcol,gtecol,bagcol,airline,adtype,status,nextfocus,recstep,strrow,endrow,maxrow,setairline,setfilter,setdate,setdelay)
-    def __init__(self,ad,schcol,aircol,typcol,adecol,stscol,fltcol,gtecol,bagcol,al,at,st,nf,rs,sr,er,mr,sa,sf,sd,sl,setflight,setadcity):
+    def __init__(self,setairline,setfilter,setdate,setdelay,setflightno,setadcity,ad,schcol,aircol,typcol,adecol,stscol,fltcol,gtecol,bagcol,nf,rs,sr,er,mr):
         self.retval = 0
         self.w = 1280
         self.h = 720
 
+        self.today = datetime.datetime.today()
+        self.cleantime=self.today.strftime('%c')
         # Background and titles
         self.background  = xbmcgui.ControlImage(0,0,self.w,self.h,os.path.join(addon.getAddonInfo('path'),'resources','media','background.jpg'),colorDiffuse='0xff777777')
         self.addControl(self.background)
         self.titlelabel1 = xbmcgui.ControlLabel(70,25,self.w-140,30,addon.getLocalizedString(id=30000),textColor='0xff00cc77',alignment=6)
         self.addControl(self.titlelabel1)
-        self.titlelabel2 = xbmcgui.ControlLabel(50,50,self.w-140,30,addon.getLocalizedString(id=30008)+': '+sd+', '+addon.getLocalizedString(id=30011)+': '+sa+', '+addon.getLocalizedString(id=30041)+': '+sf+', '+addon.getLocalizedString(id=30062)+' '+setflightno+', '+addon.getLocalizedString(id=30009)+': '+setadcity,textColor='0xffffffff',alignment=6)
+        self.titlelabel2 = xbmcgui.ControlLabel(70,50,self.w-140,30,self.cleantime,textColor='0xffffffff',alignment=6)
         self.addControl(self.titlelabel2)
-        if sl == 'true':
-           self.titlelabel3 = xbmcgui.ControlLabel(70,75,self.w-140,30,addon.getLocalizedString(id=30007),textColor='0xffff5555',alignment=6)
-           self.addControl(self.titlelabel3)
+        self.titlelabel3 = xbmcgui.ControlLabel(50,75,self.w-140,30,'['+addon.getLocalizedString(id=30008)+': '+setdate+']  ['+addon.getLocalizedString(id=30011)+': '+setairline+']  ['+addon.getLocalizedString(id=30041)+': '+setfilter+']   ['+addon.getLocalizedString(id=30062)+' '+setflightno+']   ['+addon.getLocalizedString(id=30009)+': '+setadcity+']',textColor='0xffffffff',alignment=6)
+        self.addControl(self.titlelabel3)
+        if setdelay == 'true':
+           self.titlelabel4 = xbmcgui.ControlLabel(70,100,self.w-140,30,addon.getLocalizedString(id=30007),textColor='0xffff5555',alignment=6)
+           self.addControl(self.titlelabel4)
         #self.debuglabel1 = xbmcgui.ControlLabel(50,100,self.w-140,30,'[ len(ad)='+str(len(ad))+', recstep='+str(rs)+', strrow='+str(sr)+', endrow='+str(er)+', maxrow='+str(mr)+' ]',textColor='0xffff0000',alignment=6)
         #self.addControl(self.debuglabel1)
         #self.debuglabel2 = xbmcgui.ControlLabel(50,125,self.w-140,30,'[ setairline='+sa+', setfilter='+sf+', setdelay='+sl+' ]',textColor='0xffff0000',alignment=6)
@@ -105,6 +110,7 @@ class FlightTableDialog(xbmcgui.WindowDialog):
         self.addControl(self.gate)
         self.addControl(self.bag)
 
+        # Column data
         self.schlst = xbmcgui.ControlList(10,200,350,500)   # Schedule
         self.airlst = xbmcgui.ControlList(150,200,350,500)  # Airline
         self.typlst = xbmcgui.ControlList(275,200,350,500)  # Type
@@ -121,11 +127,13 @@ class FlightTableDialog(xbmcgui.WindowDialog):
         self.addControl(self.fltlst)
         self.addControl(self.gtelst)
         self.addControl(self.baglst)
+
         # Populate table columns if flight information is available
         if len(ad) == 0:
             self.noflts    = xbmcgui.ControlLabel(300,200,750,30,addon.getLocalizedString(id=30006),textColor='0xffff5555')
             self.addControl(self.noflts)
         else:
+            # Populate display lists with column data
             self.schlst.addItems(schcol[sr:er])
             self.airlst.addItems(aircol[sr:er])
             self.typlst.addItems(typcol[sr:er])
@@ -144,7 +152,6 @@ class FlightTableDialog(xbmcgui.WindowDialog):
         self.addControl(self.buttonset)
         self.buttonok=xbmcgui.ControlButton(self.w/2+250,self.h-80,200,30,addon.getLocalizedString(id=30003),alignment=6)
         self.addControl(self.buttonok)
-
         self.buttonprev.controlRight(self.buttonnext)
         self.buttonnext.controlLeft(self.buttonprev)
         self.buttonnext.controlRight(self.buttonset)
@@ -165,24 +172,6 @@ class FlightTableDialog(xbmcgui.WindowDialog):
             self.close()
 
     def onControl(self, controlID):
-        '''
-        self.schcol.clear()
-        self.aircol.clear()
-        self.typcol.clear()
-        self.adecol.clear()
-        self.stscol.clear()
-        self.fltcol.clear()
-        self.gtecol.clear()
-        self.bagcol.clear()
-        '''
-        self.schlst.reset()
-        self.airlst.reset()
-        self.typlst.reset()
-        self.adelst.reset()
-        self.stslst.reset()
-        self.fltlst.reset()
-        self.gtelst.reset()
-        self.baglst.reset()
         if controlID == self.buttonok:
             self.retval=0
             self.close()
@@ -235,9 +224,11 @@ def setDatecode(setdate):
     xbmc.log(msg='Fly PDX: setDatecode()')
     return datecode
 
+alldetails = []
 finished  = 0
 while finished == 0:
     xbmc.log(msg='Fly PDX: Starting...')
+
     addon = xbmcaddon.Addon(id='plugin.program.flypdx')
 
     setairline = xbmcaddon.Addon().getSetting('service1')
@@ -272,31 +263,44 @@ while finished == 0:
         xbmc.log(msg='Fly PDX: urllib2.Request(url) failed')
 
     req.add_header('User-Agent', 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-GB; rv:1.9.0.3) Gecko/2008092417 Firefox/3.0.3')
-    response = urllib2.urlopen(req)
-    content     = response.read()
+    response   = urllib2.urlopen(req)
+    content    = response.read()
     response.close()
-    content = re.sub('&#39;','\'',content)
-    alldetails = re.compile('<td>(.+?)</td>').findall(content)
-    airline    = re.compile('<td>\s+?<a href=".+?Airlines/(.+?)"').findall(content)
-    adtype     = re.compile('<td>\s+?<strong>(.+?)</strong>').findall(content)
 
-    search = r'<span class="text-danger">\s+?<strong>'
-    content = re.sub(search,'<span>',content)
+    content    = re.sub('&#39;','\'',content)
+
+    search = r'<td>\s+?<a href=".+?Airlines/'
+    content = re.sub(search,'<td>',content)
+    search = r'">\s+?<img.+>'
+    content = re.sub(search,'',content)
+    search = r'\s+?</a>\s+?</td>'
+    content = re.sub(search,'</td>',content)
+
+    search = r'<td>\s+?<strong>'
+    content = re.sub(search,'<td>',content)
+    search = r'</strong>\s+?</td>'
+    content = re.sub(search,'</td>',content)
+
+    search = r'<td>\s+?<span>'
+    content = re.sub(search,'<td>',content)
+    search = r'</span>\s+?</td>'
+    content = re.sub(search,'</td>',content)
+
+    search = r'<td>\s+?<span class="text-danger">\s+?<strong>'
+    content = re.sub(search,'<td>',content)
     search = r'</strong>'
-    content = re.sub(search,'</span>',content)
-    search = r'<td>\s+?<span>(.+?)</span>'
-    status = re.compile('<td>\s+?<span>(.+?)</span>').findall(content)
+    content = re.sub(search,'</td>',content)
 
-    recstep = 5
+    search = r'<td>(.+)</td>'
+    alldetails.extend(re.compile(search).findall(content))
+
+    recstep = 8
 
     adlength = int(len(alldetails)/recstep)
-    allength = int(len(airline))
-    atlength = int(len(adtype))
-    stlength = int(len(status))
 
     info = FlightInfo(alldetails,recstep)
     info.fixGate(alldetails,recstep)
-    info.assignCol(alldetails,airline,adtype,status,recstep)
+    info.assignCol(alldetails,recstep)
     schcol = info.schcol
     aircol = info.aircol
     typcol = info.typcol
@@ -316,8 +320,8 @@ while finished == 0:
         endrow = maxrow
 
     while newsettings == 0:
-        #def __init__(self,ad,schcol,aircol,typcol,adecol,stscol,fltcol,gtecol,bagcol,al,at,st,nf,rs,sr,er,mr,sa,sf,sd,sl,st,sc):
-        dialog = FlightTableDialog(alldetails,schcol,aircol,typcol,adecol,stscol,fltcol,gtecol,bagcol,airline,adtype,status,nextfocus,recstep,strrow,endrow,maxrow,setairline,setfilter,setdate,setdelay,setflightno,setadcity)
+        #        def __init__(self,setairline,setfilter,setdate,setdelay,setflightno,setadcity,ad,schcol,aircol,typcol,adecol,stscol,fltcol,gtecol,bagcol,nf,rs,sr,er,mr):
+        dialog = FlightTableDialog(setairline,setfilter,setdate,setdelay,setflightno,setadcity,alldetails,schcol,aircol,typcol,adecol,stscol,fltcol,gtecol,bagcol,nextfocus,recstep,strrow,endrow,maxrow)
         dialog.doModal()
         if dialog.retval == 0:
             finished = 1
@@ -345,8 +349,9 @@ while finished == 0:
                     endrow = int(len(alldetails)/recstep)
         elif dialog.retval == 2:
             newsettings = 1
+            del alldetails[:]
             xbmcaddon.Addon(id='plugin.program.flypdx').openSettings()
-            nextfocus = 1
-        del dialog
 
+        del dialog
+        xbmc.log(msg='Fly PDX: del dialog')
 del addon
