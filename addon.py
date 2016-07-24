@@ -172,6 +172,14 @@ class FlightTableDialog(xbmcgui.WindowDialog):
             self.close()
 
     def onControl(self, controlID):
+        self.schlst.reset()
+        self.airlst.reset()
+        self.typlst.reset()
+        self.adelst.reset()
+        self.stslst.reset()
+        self.fltlst.reset()
+        self.gtelst.reset()
+        self.baglst.reset()
         if controlID == self.buttonok:
             self.retval=0
             self.close()
@@ -330,9 +338,9 @@ while finished == 0:
             nextfocus = 1
             strrow += maxrow
             endrow += maxrow
-            if endrow > math.ceil(len(alldetails)/recstep):
+            if strrow > int(len(alldetails)/recstep):
                 strrow = 0
-                if math.ceil(len(alldetails)/recstep) < maxrow:
+                if maxrow > int(len(alldetails)/recstep):
                     endrow = int(len(alldetails)/recstep)
                 else:
                     endrow = maxrow
@@ -341,17 +349,21 @@ while finished == 0:
             strrow -= maxrow
             endrow -= maxrow
             if strrow < 0:
-                if math.ceil(len(alldetails)/recstep) < maxrow:
+                if maxrow > int(len(alldetails)/recstep):
                     strrow = 0
                     endrow = int(len(alldetails)/recstep)
                 else:
-                    strrow = int(len(alldetails)/recstep)-maxrow
-                    endrow = int(len(alldetails)/recstep)
+                    if endrow > 0:
+                        strrow = 0
+                        endrow = maxrow
+                    else:
+                        strrow = int(len(alldetails)/recstep)-maxrow
+                        endrow = int(len(alldetails)/recstep)
         elif dialog.retval == 2:
             newsettings = 1
             del alldetails[:]
             xbmcaddon.Addon(id='plugin.program.flypdx').openSettings()
 
-        del dialog
-        xbmc.log(msg='Fly PDX: del dialog')
+        #del dialog
+        #xbmc.log(msg='Fly PDX: del dialog')
 del addon
