@@ -6,7 +6,6 @@ Fly PDX displays flight information for the Portland International Airport (PDX)
 Supported platforms
 -------------------
 - Linux 64 bits (starting Linux Mint 17.3)
-- Android
 
 Download
 --------

@@ -16,9 +16,12 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import datetime, io, math, os, re, requests, sys, urllib2, urllib
+import datetime, io, math, os, re, sys, urllib2, urllib
 from lxml import html
 import xbmc, xbmcaddon, xbmcvfs, xbmcgui, xbmcplugin
+
+sys.path.append("./requests/requests")
+import requests
 
 #import rpdb2
 #rpdb2.start_embedded_debugger('pw')
