@@ -11,7 +11,7 @@
     </extension>
     <extension point="xbmc.addon.metadata">
         <platform>all</platform>
-        <disclaimer>Tested on Kodi under Linux Mint 17.3</disclaimer>
+        <disclaimer>Tested on Kodi under Linux Mint 17.3 and OpenELEC 6.0.3</disclaimer>
         <summary lang="en">Display flight details for Portland International Airport (PDX)</summary>
         <description lang="en">The flypdx add-on for Kodi displays a table of arrival and departure flight details by airline.</description>
         <license>GNU GENERAL PUBLIC LICENSE. Version 2, June 1991</license>
